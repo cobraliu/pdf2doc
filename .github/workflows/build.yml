@@ -23,6 +23,11 @@ jobs:
             path: dist/扫描件转Word
 
     runs-on: ${{ matrix.os }}
+    # Windows runner 的 stdout 不是 UTF-8, 任何中文输出(含依赖库的日志)都会
+    # 抛 UnicodeEncodeError 让整步失败, 必须显式声明
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
 
@@ -49,7 +54,7 @@ jobs:
       # 关键: RapidOCR 首次实例化才会下载模型。必须在打包前完成,
       # 否则打出来的包缺 .onnx, 用户首次运行会尝试联网。
       - name: 预下载 OCR 模型
-        run: python -c "from rapidocr import RapidOCR; RapidOCR(); print('模型就绪')"
+        run: python -c "from rapidocr import RapidOCR; RapidOCR(); print('models ready')"
 
       - name: 构建
         run: pyinstaller pdfrec-gui.spec --noconfirm
