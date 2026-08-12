@@ -1,0 +1,104 @@
+# Dependencies
+**/node_modules/
+vendor/
+.pnp/
+.pnp.js
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+out/
+target/
+*.class
+
+# Large model / data files
+*.bin
+*.weights
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.parquet
+*.arrow
+*.safetensors
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+*.rar
+*.7z
+
+# Media
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.mp3
+*.wav
+*.flac
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+*.swo
+.cache/
+tmp/
+temp/
+
+# Secrets / env
+.env
+.env.*
+*.pem
+*.key
+secrets.*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+
+# ClaudeManager runtime
+.claude/
+
+# pdfRec 中间产物 (页图 + OCR 缓存, 可由 convert.py 重新生成)
+.pdfrec_cache/
+*.manifest
+
+# 用户文档一律不入库 —— 本工具处理的是合同等敏感扫描件,
+# 默认全部排除, 只放行 examples/ 下的合成脱敏示例。
+*.pdf
+*.docx
+*.doc
+!examples/*.pdf
+!examples/*.docx

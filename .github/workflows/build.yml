@@ -1,0 +1,100 @@
+name: build
+
+# PyInstaller 不支持交叉编译, 因此三个平台各构建一次
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:          # 也可在 Actions 页面手动触发
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: 扫描件转Word-windows
+            path: dist/扫描件转Word.exe
+          - os: macos-latest
+            artifact: 扫描件转Word-macos
+            path: dist/扫描件转Word.app
+          - os: ubuntu-latest
+            artifact: 扫描件转Word-linux
+            path: dist/扫描件转Word
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'      # 3.13 上个别 wheel 仍不齐, 3.12 最稳
+          cache: pip
+
+      # PySide6 在 Linux 上被 PyInstaller 分析时需要这些系统库
+      - name: 安装 Linux 系统依赖
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-cursor0
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # 关键: RapidOCR 首次实例化才会下载模型。必须在打包前完成,
+      # 否则打出来的包缺 .onnx, 用户首次运行会尝试联网。
+      - name: 预下载 OCR 模型
+        run: python -c "from rapidocr import RapidOCR; RapidOCR(); print('模型就绪')"
+
+      - name: 构建
+        run: pyinstaller pdfrec-gui.spec --noconfirm
+
+      - name: 校验产物内含模型 (防止打出空壳)
+        shell: bash
+        run: |
+          echo "--- dist 目录 ---"; ls -la dist/
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            n=$(find "dist/扫描件转Word.app" -name "*.onnx" | wc -l)
+          else
+            n=1   # 单文件模式无法直接查看内部, 以体积代替校验
+            sz=$(du -m "${{ matrix.path }}" | cut -f1)
+            echo "产物体积: ${sz} MB"
+            [ "$sz" -gt 100 ] || { echo "体积异常偏小, 可能缺模型"; exit 1; }
+          fi
+          echo "内含 onnx 模型数: $n"
+          [ "$n" -gt 0 ] || { echo "缺少 ONNX 模型"; exit 1; }
+
+      - name: 打包 macOS .app 为 zip
+        if: runner.os == 'macOS'
+        run: cd dist && zip -qry 扫描件转Word-macos.zip 扫描件转Word.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            ${{ runner.os == 'macOS' && 'dist/扫描件转Word-macos.zip' || matrix.path }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          body: |
+            扫描版 PDF -> 可编辑 Word，全本地运行，不联网。
+
+            - Windows: 下载 `扫描件转Word.exe`，双击运行
+            - macOS: 下载 zip 解压，首次打开需右键 → 打开（未签名）
+            - Linux: 下载后 `chmod +x` 运行
