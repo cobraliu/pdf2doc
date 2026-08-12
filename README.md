@@ -35,11 +35,10 @@ OCR 只能给出「这一行字在哪个坐标」，把它还原成有结构的 
 | 平台 | 下载 | 说明 |
 |---|---|---|
 | Windows | `pdf2doc-windows.exe` | 下载即运行，无需解压；也可把 PDF 直接拖到图标上 |
-| macOS | `pdf2doc-macos.zip` | 解压后**右键 → 打开**（未做代码签名，直接双击会被拦） |
+| macOS | `pdf2doc-macos.dmg` | 打开后把「扫描件转Word」拖进 Applications；首次启动需**右键 → 打开**（未做代码签名，直接双击会被拦） |
 | Linux | `pdf2doc-linux` | `chmod +x pdf2doc-linux && ./pdf2doc-linux` |
 
-> 资产名是 ASCII 的：GitHub Release 只保留 `[A-Za-z0-9._-]`，中文文件名会被吃掉。
-> macOS 之所以还是 zip，是因为 `.app` 本质是目录，没法当单个文件下载。
+> 资产名是 ASCII 的：GitHub Release 只保留 `[A-Za-z0-9._-]`，中文文件名会被吃掉。程序本身仍叫「扫描件转Word」。
 
 界面：把 PDF（或整个文件夹）拖进左侧列表 → 点「开始转换」。
 
