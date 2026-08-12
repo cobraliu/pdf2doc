@@ -15,15 +15,15 @@ jobs:
           - os: windows-latest
             artifact: pdf2doc-windows
             path: dist/扫描件转Word.exe
-            zip: pdf2doc-windows.zip
+            asset: pdf2doc-windows.exe        # 直接下载即可运行
           - os: macos-latest
             artifact: pdf2doc-macos
             path: dist/扫描件转Word.app
-            zip: pdf2doc-macos.zip
+            asset: pdf2doc-macos.zip          # .app 是目录, 只能压包
           - os: ubuntu-latest
             artifact: pdf2doc-linux
             path: dist/扫描件转Word
-            zip: pdf2doc-linux.zip
+            asset: pdf2doc-linux              # 直接下载, chmod +x 后运行
 
     runs-on: ${{ matrix.os }}
     # Windows runner 的 stdout 不是 UTF-8, 任何中文输出(含依赖库的日志)都会
@@ -78,23 +78,23 @@ jobs:
           [ "$n" -gt 0 ] || { echo "缺少 ONNX 模型"; exit 1; }
 
       # GitHub Release 的资产名只保留 [A-Za-z0-9._-], 中文会被替换后合并掉
-      # (扫描件转Word.exe -> Word.exe, 扫描件转Word -> default.Word)。
-      # 因此统一压成 ASCII 名的 zip, 中文文件名保留在压缩包内部。
-      - name: 打包为 zip
+      # (扫描件转Word.exe -> Word.exe, 扫描件转Word -> default.Word), 所以
+      # 上传前改成 ASCII 名。Windows/Linux 保持单个可执行文件, 下载即用;
+      # macOS 的 .app 是目录, 只能压成 zip。
+      - name: 准备发布资产
         shell: bash
         run: |
-          cd dist
           case "${{ runner.os }}" in
-            macOS)   zip -qry "../${{ matrix.zip }}" "扫描件转Word.app" ;;
-            Linux)   chmod +x "扫描件转Word"; zip -qy "../${{ matrix.zip }}" "扫描件转Word" ;;
-            Windows) 7z a -tzip "../${{ matrix.zip }}" "扫描件转Word.exe" > /dev/null ;;
+            macOS)   (cd dist && zip -qry "../${{ matrix.asset }}" "扫描件转Word.app") ;;
+            Linux)   cp "dist/扫描件转Word"     "${{ matrix.asset }}"; chmod +x "${{ matrix.asset }}" ;;
+            Windows) cp "dist/扫描件转Word.exe" "${{ matrix.asset }}" ;;
           esac
-          cd .. && ls -la "${{ matrix.zip }}"
+          ls -la "${{ matrix.asset }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.zip }}
+          path: ${{ matrix.asset }}
           if-no-files-found: error
 
   release:
@@ -108,14 +108,16 @@ jobs:
         with: { path: artifacts }
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*.zip
+          files: artifacts/**/*
           body: |
             扫描版 PDF -> 可编辑 Word，全本地运行，不联网。
 
-            解压后即为「扫描件转Word」程序：
+            | 平台 | 下载 | 怎么用 |
+            |---|---|---|
+            | Windows | `pdf2doc-windows.exe` | 双击运行；也可把 PDF 拖到图标上 |
+            | macOS | `pdf2doc-macos.zip` | 解压后**右键 → 打开**（未签名，双击会被拦） |
+            | Linux | `pdf2doc-linux` | `chmod +x pdf2doc-linux && ./pdf2doc-linux` |
 
-            - **Windows**: `pdf2doc-windows.zip` → 解压得到 `扫描件转Word.exe`，双击运行
-            - **macOS**: `pdf2doc-macos.zip` → 解压得到 `扫描件转Word.app`，首次打开需右键 → 打开（未签名）
-            - **Linux**: `pdf2doc-linux.zip` → 解压后 `chmod +x 扫描件转Word` 再运行
+            Windows / Linux 下载即可直接运行，无需解压；macOS 因为 `.app` 是目录，只能压包分发。
 
-            > 三个包各约 160–240 MB，因为内置了 30 MB OCR 模型和整套 Qt 运行时，装好即用、无需联网。
+            > 每个文件约 160–240 MB：内置了 30 MB OCR 模型和整套 Qt 运行时，开箱即用、全程不联网。
