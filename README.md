@@ -32,11 +32,13 @@ OCR 只能给出「这一行字在哪个坐标」，把它还原成有结构的 
 
 到 [Releases](../../releases) 下载对应平台的包：
 
-| 平台 | 文件 | 说明 |
-|---|---|---|
-| Windows | `扫描件转Word.exe` | 双击运行；也可把 PDF 直接拖到 exe 图标上 |
-| macOS | `扫描件转Word-macos.zip` | 解压后**右键 → 打开**（未做代码签名，直接双击会被拦） |
-| Linux | `扫描件转Word` | `chmod +x` 后运行 |
+| 平台 | 下载 | 解压后 | 说明 |
+|---|---|---|---|
+| Windows | `pdf2doc-windows.zip` | `扫描件转Word.exe` | 双击运行；也可把 PDF 直接拖到 exe 图标上 |
+| macOS | `pdf2doc-macos.zip` | `扫描件转Word.app` | **右键 → 打开**（未做代码签名，直接双击会被拦） |
+| Linux | `pdf2doc-linux.zip` | `扫描件转Word` | `chmod +x` 后运行 |
+
+> 之所以都压成 zip：GitHub 的 Release 资产名只保留 `[A-Za-z0-9._-]`，中文文件名会被吃掉。
 
 界面：把 PDF（或整个文件夹）拖进左侧列表 → 点「开始转换」。
 

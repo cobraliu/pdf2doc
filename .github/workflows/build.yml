@@ -13,14 +13,17 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: 扫描件转Word-windows
+            artifact: pdf2doc-windows
             path: dist/扫描件转Word.exe
+            zip: pdf2doc-windows.zip
           - os: macos-latest
-            artifact: 扫描件转Word-macos
+            artifact: pdf2doc-macos
             path: dist/扫描件转Word.app
+            zip: pdf2doc-macos.zip
           - os: ubuntu-latest
-            artifact: 扫描件转Word-linux
+            artifact: pdf2doc-linux
             path: dist/扫描件转Word
+            zip: pdf2doc-linux.zip
 
     runs-on: ${{ matrix.os }}
     # Windows runner 的 stdout 不是 UTF-8, 任何中文输出(含依赖库的日志)都会
@@ -74,15 +77,24 @@ jobs:
           echo "内含 onnx 模型数: $n"
           [ "$n" -gt 0 ] || { echo "缺少 ONNX 模型"; exit 1; }
 
-      - name: 打包 macOS .app 为 zip
-        if: runner.os == 'macOS'
-        run: cd dist && zip -qry 扫描件转Word-macos.zip 扫描件转Word.app
+      # GitHub Release 的资产名只保留 [A-Za-z0-9._-], 中文会被替换后合并掉
+      # (扫描件转Word.exe -> Word.exe, 扫描件转Word -> default.Word)。
+      # 因此统一压成 ASCII 名的 zip, 中文文件名保留在压缩包内部。
+      - name: 打包为 zip
+        shell: bash
+        run: |
+          cd dist
+          case "${{ runner.os }}" in
+            macOS)   zip -qry "../${{ matrix.zip }}" "扫描件转Word.app" ;;
+            Linux)   chmod +x "扫描件转Word"; zip -qy "../${{ matrix.zip }}" "扫描件转Word" ;;
+            Windows) 7z a -tzip "../${{ matrix.zip }}" "扫描件转Word.exe" > /dev/null ;;
+          esac
+          cd .. && ls -la "${{ matrix.zip }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            ${{ runner.os == 'macOS' && 'dist/扫描件转Word-macos.zip' || matrix.path }}
+          path: ${{ matrix.zip }}
           if-no-files-found: error
 
   release:
@@ -96,10 +108,14 @@ jobs:
         with: { path: artifacts }
       - uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/**/*.zip
           body: |
             扫描版 PDF -> 可编辑 Word，全本地运行，不联网。
 
-            - Windows: 下载 `扫描件转Word.exe`，双击运行
-            - macOS: 下载 zip 解压，首次打开需右键 → 打开（未签名）
-            - Linux: 下载后 `chmod +x` 运行
+            解压后即为「扫描件转Word」程序：
+
+            - **Windows**: `pdf2doc-windows.zip` → 解压得到 `扫描件转Word.exe`，双击运行
+            - **macOS**: `pdf2doc-macos.zip` → 解压得到 `扫描件转Word.app`，首次打开需右键 → 打开（未签名）
+            - **Linux**: `pdf2doc-linux.zip` → 解压后 `chmod +x 扫描件转Word` 再运行
+
+            > 三个包各约 160–240 MB，因为内置了 30 MB OCR 模型和整套 Qt 运行时，装好即用、无需联网。
