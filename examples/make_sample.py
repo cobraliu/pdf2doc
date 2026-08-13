@@ -5,7 +5,7 @@
 与噪点, 用来演示 convert.py 的版面重建能力, 覆盖这几种典型版式:
 
     中英对照 / 编号层级(1. 1.1 三、) / 两列"标签—值" / 项目符号列表 /
-    页眉页脚 / 印章与手写签名噪声
+    带框线的表格(含跨行/跨列合并单元格) / 页眉页脚 / 印章与手写签名噪声
 
 用法:  python3 make_sample.py        # 就地生成 sample_scanned.pdf
 依赖:  pillow pymupdf   (字体路径按 macOS 写, 其他平台改 ZH/EN 即可)
@@ -59,7 +59,8 @@ def page1():
           ('t', L, y + 40, 'CONTRACT NUMBER', Fe(24))]
 
     y = 530
-    b += [('t', L, y, '法定地址 / LEGAL ADDRESS BUYER', Fe(26)),
+    # 中英混排必须分两次画: Arial 没有汉字字形, 一次画完会出一排豆腐块
+    b += [('t', L, y, '法定地址', Fz(26)), ('t', L + 116, y, '/ LEGAL ADDRESS BUYER', Fe(26)),
           ('line', L, y + 52, L + 600, y + 52)]   # 下划线离字底留够间距, 否则 OCR 会把汉字读糊
     y += 84
     for zh, en, v1, v2 in [('买方：', 'The Buyer', '示例科技有限公司', 'Example Technology Co., Ltd.'),
@@ -71,7 +72,7 @@ def page1():
         y += 96
 
     y += 44
-    b += [('t', L, y, '法定地址 / LEGAL ADDRESS SELLER', Fe(26)),
+    b += [('t', L, y, '法定地址', Fz(26)), ('t', L + 116, y, '/ LEGAL ADDRESS SELLER', Fe(26)),
           ('line', L, y + 52, L + 610, y + 52)]
     y += 84
     for zh, en, v1, v2 in [('卖方：', 'The Seller', '示范设备制造股份公司', 'Demo Equipment Manufacturing AG'),
@@ -84,7 +85,7 @@ def page1():
     b += [('t', L, y, '签约地点及日期：', Fz(26)), ('t', L + 380, y, '示范市，2025 年 01 月 01 日', Fz(26)),
           ('t', L, y + 40, 'SIGNING PLACE AND DATE', Fe(24)),
           ('t', L + 380, y + 40, 'Demo City, January 1st, 2025', Fe(24)),
-          ('t', 780, 2230, '1/2', Fe(24))]
+          ('t', 780, 2230, '1/3', Fe(24))]
     draw_all(d, b)
 
     # 手写签名 + 印章: 用来演示"低置信度短串"噪声剔除
@@ -158,9 +159,51 @@ def page2():
               '3、验收合格后支付 10% 质保金，金额为 00000.00 元（示例金额）。']:
         b += [('t', L + 20, y, t, Fz(25))]
         y += 48
-    b += [('t', 780, 2230, '2/2', Fe(24))]
+    b += [('t', 780, 2230, '2/3', Fe(24))]
     draw_all(d, b)
     d.line((200, 2150, 255, 2105), fill=(40, 40, 90), width=3)
+    return im
+
+
+# 第 3 页的框线表: 列边界与行边界(像素)。演示三件事 ——
+#   格内多行文字不被拆成多行、跨行合并(备注)、跨列合并(合计行)
+GX = [150, 270, 660, 1010, 1150, 1360, 1504]
+GY = [430, 500, 620, 690, 760, 830]
+
+
+def page3():
+    im = Image.new('RGB', (W, H), (252, 252, 250))
+    d = ImageDraw.Draw(im)
+    b = [('t', 1180, 90, 'EXAMPLE CORP', Fe(40)), ('t', 1180, 140, 'SAMPLE  DOCUMENT', Fe(18)),
+         ('t', L, 250, '四、供货清单 / LIST OF SUPPLY', Fzb(26)),
+         ('t', L, 330, '下表为本合同项下的供货明细，最终以附件一为准。', Fz(25))]
+    # 竖线: 中间几条到"合计"行就停(合计行左半边是一个跨 4 列的合并格)
+    for i, x in enumerate(GX):
+        b += [('line', x, GY[0], x, GY[-1] if i in (0, 4, 6) else GY[-2])]
+    # 横线: 中间两条不画进"备注"列 —— 那里是一个跨 3 行的合并格
+    for i, y in enumerate(GY):
+        b += [('line', GX[0], y, GX[5] if i in (2, 3) else GX[-1], y)]
+    cells = [
+        (0, 0, '序号', Fz(24)), (0, 1, '品名 / Item', Fz(24)), (0, 2, '规格型号', Fz(24)),
+        (0, 3, '数量', Fz(24)), (0, 4, '金额（元）', Fz(24)), (0, 5, '备注', Fz(24)),
+        (1, 0, '1', Fe(24)), (1, 2, 'DEMO-100', Fe(24)), (1, 3, '1', Fe(24)),
+        (1, 4, '000.00', Fe(24)),
+        (2, 0, '2', Fe(24)), (2, 1, '示例附件', Fz(24)), (2, 2, 'DEMO-200', Fe(24)),
+        (2, 3, '2', Fe(24)), (2, 4, '000.00', Fe(24)),
+        (3, 0, '3', Fe(24)), (3, 1, '示例备件包', Fz(24)), (3, 2, 'DEMO-300', Fe(24)),
+        (3, 3, '1', Fe(24)), (3, 4, '000.00', Fe(24)),
+    ]
+    for r, c, t, f in cells:
+        b += [('t', GX[c] + 16, GY[r] + 18, t, f)]
+    # 一格两行: 老办法会把它拆成两行表格行, 照框线还原才留在同一格里
+    b += [('t', GX[1] + 16, GY[1] + 12, '示例主机', Fz(24)),
+          ('t', GX[1] + 16, GY[1] + 58, 'Demo Main Unit', Fe(23))]
+    b += [('t', GX[5] + 16, GY[1] + 96, '按附件一', Fz(24))]        # 跨 3 行的合并格
+    b += [('t', GX[0] + 16, GY[4] + 18, '合计 / TOTAL（含税）', Fz(24)),   # 跨 4 列的合并格
+          ('t', GX[4] + 16, GY[4] + 18, '0000.00', Fe(24))]
+    b += [('t', L, 900, '注：上表金额均为示例数据，不代表任何真实报价。', Fz(24)),
+          ('t', 780, 2230, '3/3', Fe(24))]
+    draw_all(d, b)
     return im
 
 
@@ -176,7 +219,7 @@ def scanify(im, angle):
 
 
 def main():
-    pages = [scanify(page1(), -0.35), scanify(page2(), 0.25)]
+    pages = [scanify(page1(), -0.35), scanify(page2(), 0.25), scanify(page3(), -0.2)]
     doc = pymupdf.open()
     tmp = []
     for i, im in enumerate(pages):

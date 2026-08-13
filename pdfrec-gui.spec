@@ -30,7 +30,7 @@ from PyInstaller.utils.hooks import collect_submodules
 hiddenimports = [
     *collect_submodules('rapidocr'),
     'onnxruntime', 'onnxruntime.capi', 'onnxruntime.capi._pybind_state',
-    'PIL.Image', 'docx', 'pymupdf', 'yaml', 'cv2', 'shapely', 'convert',
+    'PIL.Image', 'docx', 'openpyxl', 'pymupdf', 'yaml', 'cv2', 'shapely', 'convert',
 ]
 
 # PySide6 里没用到的一律排除 —— 这是体积能否控制住的关键

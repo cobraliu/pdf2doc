@@ -100,5 +100,8 @@ desktop.ini
 *.pdf
 *.docx
 *.doc
+*.xlsx
+*.xls
 !examples/*.pdf
 !examples/*.docx
+!examples/*.xlsx

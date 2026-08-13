@@ -26,7 +26,7 @@ datas = [
 hiddenimports = [
     *collect_submodules('rapidocr'),
     'onnxruntime', 'onnxruntime.capi', 'onnxruntime.capi._pybind_state',
-    'PIL.Image', 'docx', 'pymupdf', 'yaml', 'cv2', 'shapely',
+    'PIL.Image', 'docx', 'openpyxl', 'pymupdf', 'yaml', 'cv2', 'shapely',
 ]
 
 excludes = [
