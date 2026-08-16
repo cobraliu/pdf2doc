@@ -93,6 +93,8 @@ desktop.ini
 
 # pdfRec 中间产物 (页图 + OCR 缓存, 可由 convert.py 重新生成)
 .pdfrec_cache/
+# Rust 版 CLI 的 OCR 缓存 —— 里面是识别出来的全文, 原件不入库它更不能入
+.pdf2doc_cache/
 *.manifest
 
 # 用户文档一律不入库 —— 本工具处理的是合同等敏感扫描件,
